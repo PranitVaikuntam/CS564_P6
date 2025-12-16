@@ -15,25 +15,24 @@ const Status QU_Delete(const string & relation,
 		       const Datatype type, 
 		       const char *attrValue)
 {
-    Status status;
+	// 
+    Status status; 
     HeapFileScan *hfs;
     RID rid;
     
     // Check if this is an unconditional delete (no WHERE clause)
     if (attrName.empty()) {
-        // Unconditional delete - delete all records
+		// Opens HeapFileScan for the relation 
         hfs = new HeapFileScan(relation, status);
         if (status != OK) {
             return status;
         }
-        
-        // Start an unconditional scan (pass 0 for offset, 0 for length)
+        // Start scan without filtering
         status = hfs->startScan(0, 0, STRING, NULL, EQ);
         if (status != OK) {
             delete hfs;
             return status;
         }
-        
         // Delete all records
         while (hfs->scanNext(rid) == OK) {
             status = hfs->deleteRecord();
@@ -42,51 +41,49 @@ const Status QU_Delete(const string & relation,
                 return status;
             }
         }
-        
+		// when done 
         delete hfs;
         return OK;
     }
     
-    // Conditional delete - need to get attribute information from catalog
+    // Get attribute info from catalog
     AttrDesc attrDesc;
     status = attrCat->getInfo(relation, attrName, attrDesc);
     if (status != OK) {
         return status;
     }
     
-    // Create HeapFileScan object
+    // Create HeapFileScan objec 
     hfs = new HeapFileScan(relation, status);
     if (status != OK) {
         return status;
     }
     
-    // Convert attrValue to the appropriate type and start the scan
+    // Convert attrValue to the approriate type and start scan
     int intValue;
     float floatValue;
-    
+	// determines type
     switch (type) {
         case INTEGER:
-            intValue = atoi(attrValue);
-            status = hfs->startScan(attrDesc.attrOffset, attrDesc.attrLen, 
-                                   INTEGER, (char*)&intValue, op);
+            intValue = atoi(attrValue); // convert to integer
+			// thenn start scan
+            status = hfs->startScan(attrDesc.attrOffset, attrDesc.attrLen, INTEGER, (char*)&intValue, op);
             break;
-            
         case FLOAT:
-            floatValue = atof(attrValue);
-            status = hfs->startScan(attrDesc.attrOffset, attrDesc.attrLen, 
-                                   FLOAT, (char*)&floatValue, op);
+            floatValue = atof(attrValue); // convert to float
+			// then start scan
+            status = hfs->startScan(attrDesc.attrOffset, attrDesc.attrLen, FLOAT, (char*)&floatValue, op);
             break;
-            
         case STRING:
-            status = hfs->startScan(attrDesc.attrOffset, attrDesc.attrLen, 
-                                   STRING, attrValue, op);
+			// then start scan
+            status = hfs->startScan(attrDesc.attrOffset, attrDesc.attrLen, STRING, attrValue, op);
             break;
-            
         default:
             delete hfs;
             return BADCATPARM;
     }
     
+	// ensures that status is correct
     if (status != OK) {
         delete hfs;
         return status;
@@ -94,14 +91,14 @@ const Status QU_Delete(const string & relation,
     
     // Delete all matching records
     while (hfs->scanNext(rid) == OK) {
-        status = hfs->deleteRecord();
+        status = hfs->deleteRecord(); // delete record
         if (status != OK) {
             delete hfs;
             return status;
         }
     }
     
-    // Clean up and return
+    // Clean up the HeapFileScan and SUCCESS
     delete hfs;
     return OK;
 }
